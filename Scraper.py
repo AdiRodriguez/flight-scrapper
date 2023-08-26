@@ -202,5 +202,11 @@ if __name__ == '__main__':
 # TODO: DO SOMETHING WITH THE "BEST" AND "CHEAPEST" FLIGHT CARDS (plus, remove first "ad" flight card)
 # TODO: Add currency converter 
 
+# Few comments:
+# - Why are functions called: "get_" when they don't return anything
+# - Together with #1: global state bad, return results from functions instead of altering global variables
+# - "Sleep" is always a disaster waiting to happen, check if you can use events like "OnDocumentReady" or whatever it's called in the Chrome webdriver
+# - "/html/body/div[2]/div[1]/main/div/div[2]/div[2]/div[1]/div[2]/div[1]/div[3]/div[1]/div/div/div"  -> the fuck, use class names or ids to find an element 
+
 
 # NOTE: For Achmed - When Selenium/BeautifulSoup can't find the given element/HTML (for example: flight_rows = driver.find_elements(By.CLASS_NAME, 'nrc6-inner')), The script crashes and closes itself
