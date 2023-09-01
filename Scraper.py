@@ -6,8 +6,14 @@ from bs4 import BeautifulSoup
 import os
 
 from selenium.webdriver.common.by import By
+from selenium.webdriver.chrome.options import Options
 
 import re
+
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.common.exceptions import TimeoutException
+
 
 # Web Navigation Functions
 # --------------------------------------------------------
@@ -24,7 +30,7 @@ def close_popup_window():
 
 
 def load_more():
-    more_results = "ULvh" 
+    more_results = "ULvh"
     try:
         driver.find_element(By.CLASS_NAME, more_results).click()
         print("Loading more cards")
@@ -37,6 +43,7 @@ def load_more():
 # --------------------------------------------------------
 # Data Scraping Functions
 # --------------------------------------------------------
+
 
 def get_flight_cards():
     HTML_flight_cards = []
@@ -54,7 +61,8 @@ def get_flight_cards():
     except:
         print("Couldn't find flight cards to scrape by given class name (check class name again)")
         raise SystemExit
-    
+
+
 def get_flex_table():
     HTML_flex_table = []
     try:
@@ -72,17 +80,19 @@ def get_flex_table():
         print("Couldn't find flight cards to scrape by given class name (check class name again)")
         raise SystemExit
 
+
 def scrape_prices(cards):
     prices = []
     price_pattern = r'[\d,.]+'
     try:
         for card in cards:
             html_class = "f8F1-price-text"
-            price = card.find(class_= html_class)
+            price = card.find(class_=html_class)
             price_matches = re.findall(price_pattern, price.text)
             if price_matches:
                 numeric_string = price_matches[0]  # Take the first match
-                final_price = int(numeric_string.replace(',', ''))  # Remove commas and convert to integer
+                # Remove commas and convert to integer
+                final_price = int(numeric_string.replace(',', ''))
                 prices.append(final_price)
             else:
                 print("couldn't find price")
@@ -90,6 +100,7 @@ def scrape_prices(cards):
         return prices
     except:
         print(f"Price class invalid (Can't find class named ---> {html_class}")
+
 
 def scrape_flight_companies(cards):
     flight_company_a = []
@@ -106,8 +117,9 @@ def scrape_flight_companies(cards):
         else:
             inbound_flight_company = company_list[0]
             flight_company_b.append(inbound_flight_company)
-        
+
     return flight_company_a, flight_company_b
+
 
 def scrape_flight_schedule(cards):
     time_pattern = r'(\d{2}:\d{2}–\d{2}:\d{2})'
@@ -127,6 +139,7 @@ def scrape_flight_schedule(cards):
                     flight_schedule_b.append(final_time_string)
     return flight_schedule_a, flight_schedule_b
 
+
 def scrape_connections(cards):
     flight_connections_a = []
     flight_connections_b = []
@@ -139,6 +152,7 @@ def scrape_connections(cards):
             else:
                 flight_connections_b.append(connection.text)
     return flight_connections_a, flight_connections_b
+
 
 def scrape_estimated_time(cards):
     flight_estimated_time_a = []
@@ -158,14 +172,16 @@ def scrape_estimated_time(cards):
 #         test = card.find(class_="EFvI-ap-info")
 #         print(test.text)
 
+
 def scrape_flex_table(cards):
     prices = []
     price_pattern = r'[\d,.]+'
-    for i in range(21,28):
+    for i in range(21, 28):
         price_matches = re.findall(price_pattern, cards[i].text)
         if price_matches:
             numeric_string = price_matches[0]  # Take the first match
-            final_price = int(numeric_string.replace(',', ''))  # Remove commas and convert to integer
+            # Remove commas and convert to integer
+            final_price = int(numeric_string.replace(',', ''))
             prices.append(final_price)
         else:
             print("couldn't find price")
@@ -173,55 +189,73 @@ def scrape_flex_table(cards):
 
 # NOTE: Do the rest of the "get" functions (If needed)
 
+
 # --------------------------------------------------------
 # Dummy Data
 # --------------------------------------------------------
-from_location = 'LIS'
-to_location = 'MEX'
-date_start = "2023-09-28-flexible"
-date_end = "2023-09-29-flexible"
+from_location = 'TYO'
+to_location = 'LON'
+date_start = "2023-10-28-flexible"
+date_end = "2023-11-25-flexible"
 # NOTE: Move "...-flexible" to the URL
 
 URL = 'https://www.kayak.co.uk/flights/{from_location}-{to_location}/{date_start}/{date_end}?sort=bestflight_a'.format(
     to_location=to_location, from_location=from_location, date_start=date_start, date_end=date_end)
+timeout = 30
 
 # --------------------------------------------------------
 # Main Code
 # --------------------------------------------------------
 if __name__ == '__main__':
-    driver = webdriver.Chrome()
+    options = Options()
+    options.page_load_strategy = 'eager'
+    driver = webdriver.Chrome(options=options)
     driver.get(URL)
-    sleep(30)  
+    sleep(3)
     close_popup_window()
     load_more()
     load_more()
-    flight_cards = get_flight_cards()
-    flight_cards_flex = get_flex_table()
+    try:
+        # Waiting for the Text in the top right corner of the website to change from "loading... to "Buy now" or "¯\\_(ツ)_/¯" to indicate the dynamic website has finished loading 
+        WebDriverWait(driver, timeout).until_not(
+            EC.text_to_be_present_in_element(
+                (By.CLASS_NAME, "col-advice"), "Loading...")
+        )
+        print("Page loaded successfully!")
+        sleep(1) # just in case
+        flight_cards = get_flight_cards()
+        flight_cards_flex = get_flex_table()
 
-    flight_prices = scrape_prices(flight_cards)
-    schedule_a, schedule_b = scrape_flight_schedule(flight_cards)
-    company_a, company_b = scrape_flight_companies(flight_cards)
-    connections_a, connections_b = scrape_connections(flight_cards)
-    time_a, time_b = scrape_estimated_time(flight_cards)
+        flight_prices = scrape_prices(flight_cards)
+        schedule_a, schedule_b = scrape_flight_schedule(flight_cards)
+        company_a, company_b = scrape_flight_companies(flight_cards)
+        connections_a, connections_b = scrape_connections(flight_cards)
+        time_a, time_b = scrape_estimated_time(flight_cards)
 
-    flex_prices_3 = scrape_flex_table(flight_cards_flex)
-    print(flex_prices_3)
+        flex_prices_3 = scrape_flex_table(flight_cards_flex)
+        print(flex_prices_3)
 
-    flights_df = pd.DataFrame({'Prices': flight_prices,
-                           'Outbound Schedule': schedule_a,
-                           'Outbound Estimated Time': time_a,
-                           'Outbound Company': company_a,
-                           'Outbound Connections': connections_a,
-                           'Inbound Schedule': schedule_b,
-                           'Inbound Estimated Time': time_b,
-                           'Inbound Company': company_b,
-                           'Inbound Connections': connections_b 
-                           })
-    print(flights_df)
+        flights_df = pd.DataFrame({'Prices': flight_prices,
+                                   'Outbound Schedule': schedule_a,
+                                   'Outbound Estimated Time': time_a,
+                                   'Outbound Company': company_a,
+                                   'Outbound Connections': connections_a,
+                                   'Inbound Schedule': schedule_b,
+                                   'Inbound Estimated Time': time_b,
+                                   'Inbound Company': company_b,
+                                   'Inbound Connections': connections_b
+                                   })
+        print(flights_df)
 
-    sleep(25)
+    except TimeoutException:
+        print("Timed out waiting for the desired text to appear.")
+    
+ 
+    driver.quit()
 
 
-#NOTE:  Test -  driver.save_screenshot('./screenshots/pythonscraping.png') 
+# NOTE:  Test -  driver.save_screenshot('./screenshots/pythonscraping.png')
 
-#TODO: Take care of edge cases in scrape_flex_table(cards) - ex: if price before given date is blank
+# TODO: Take care of edge cases in scrape_flex_table(cards) - ex: if price before given date is blank
+
+# NOTE: Implicit, Explicit Fluent wait ---> LEARN
