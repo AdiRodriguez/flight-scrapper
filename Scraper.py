@@ -14,6 +14,11 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException
 
+from datetime import datetime
+
+
+import matplotlib.pyplot as plt
+
 
 # Web Navigation Functions
 # --------------------------------------------------------
@@ -62,7 +67,6 @@ def get_flight_cards():
         print("Couldn't find flight cards to scrape by given class name (check class name again)")
         raise SystemExit
 
-
 def get_flex_table():
     HTML_flex_table = []
     try:
@@ -79,7 +83,24 @@ def get_flex_table():
     except:
         print("Couldn't find flight cards to scrape by given class name (check class name again)")
         raise SystemExit
-
+    
+#NOTE: FIX!! 
+def scrape_flex_table_dates():
+    HTML_flex_table = []
+    try:
+        WebElements = driver.find_elements(By.CLASS_NAME, 'VuLg')
+        for WebElement in WebElements:
+            elementHTML = WebElement.get_attribute('outerHTML')
+            elementSoup = BeautifulSoup(elementHTML, 'html.parser')
+            HTML_flex_table.append(elementSoup.text)
+        if HTML_flex_table == []:
+            print("Couldn't find any flights(Array is empty)")
+            raise SystemExit
+        else:
+            return HTML_flex_table
+    except:
+        print("Couldn't find flight cards to scrape by given class name (check class name again)")
+        raise SystemExit
 
 def scrape_prices(cards):
     prices = []
@@ -119,7 +140,6 @@ def scrape_flight_companies(cards):
             flight_company_b.append(inbound_flight_company)
 
     return flight_company_a, flight_company_b
-
 
 def scrape_flight_schedule(cards):
     time_pattern = r'(\d{2}:\d{2}–\d{2}:\d{2})'
@@ -167,13 +187,7 @@ def scrape_estimated_time(cards):
                 flight_estimated_time_b.append(time.text)
     return flight_estimated_time_a, flight_estimated_time_b
 
-# def get_stops(cards):
-#     for card in cards:
-#         test = card.find(class_="EFvI-ap-info")
-#         print(test.text)
-
-
-def scrape_flex_table(cards):
+def scrape_flex_table_prices_3(cards):
     prices = []
     price_pattern = r'[\d,.]+'
     for i in range(21, 28):
@@ -184,24 +198,71 @@ def scrape_flex_table(cards):
             final_price = int(numeric_string.replace(',', ''))
             prices.append(final_price)
         else:
-            print("couldn't find price")
+            print("Couldn't find price")
+            prices.append("Not Available ")
     return prices
+
+#NOTE: FIX!!
+def scrape_flex_table_dates_3(list):
+    new_list = list[:7]
+    return new_list
 
 # NOTE: Do the rest of the "get" functions (If needed)
 
+def change_date_format(date):
+    date_object = datetime.strptime(date, "%Y-%m-%d")
+    formatted_date = date_object.strftime("%a, %d %b")
+    return (formatted_date)
+
+
+
+def create_flight_data_json(dates, prices):
+    if len(dates) != len(prices):
+        raise ValueError("Dates and prices lists must have the same length")
+
+    flight_data = []
+
+    for date, price in zip(dates, prices):
+        flight_data.append({"date": date, "price": price})
+    return flight_data
+
+def create_graph(json):
+    dates = []
+    prices = []
+
+    for entry in json:
+        if entry['price'] != 'not available':
+            dates.append(entry['date'])
+            prices.append(entry['price'])
+
+    plt.figure(figsize=(10, 6))
+    plt.plot(dates, prices, marker='o', linestyle='-', color='yellow', linewidth=2, markersize=8, markeredgecolor='black')
+    plt.title('Flight Prices Over Time', fontsize=16)
+    plt.xlabel('Date', fontsize=12)
+    plt.ylabel('Price', fontsize=12)
+    plt.xticks(rotation=45, fontsize=10)
+    plt.yticks(fontsize=10)
+    plt.grid(True, linestyle='--', alpha=0.7)
+
+    ax = plt.gca()
+    ax.set_facecolor('#f5f5f5')
+
+    # Show the graph
+    plt.tight_layout()
+    plt.show()
 
 # --------------------------------------------------------
 # Dummy Data
 # --------------------------------------------------------
 from_location = 'TYO'
 to_location = 'LON'
-date_start = "2023-10-28-flexible"
-date_end = "2023-11-25-flexible"
-# NOTE: Move "...-flexible" to the URL
+date_start = "2023-10-28"
+date_end = "2023-11-25"
 
-URL = 'https://www.kayak.co.uk/flights/{from_location}-{to_location}/{date_start}/{date_end}?sort=bestflight_a'.format(
+
+URL = 'https://www.kayak.co.uk/flights/{from_location}-{to_location}/{date_start}-flexible/{date_end}-flexible?sort=bestflight_a'.format(
     to_location=to_location, from_location=from_location, date_start=date_start, date_end=date_end)
-timeout = 30
+timeout = 40
 
 # --------------------------------------------------------
 # Main Code
@@ -213,10 +274,9 @@ if __name__ == '__main__':
     driver.get(URL)
     sleep(3)
     close_popup_window()
-    load_more()
-    load_more()
+    # load_more()
+    # load_more()
     try:
-        # Waiting for the Text in the top right corner of the website to change from "loading... to "Buy now" or "¯\\_(ツ)_/¯" to indicate the dynamic website has finished loading 
         WebDriverWait(driver, timeout).until_not(
             EC.text_to_be_present_in_element(
                 (By.CLASS_NAME, "col-advice"), "Loading...")
@@ -224,16 +284,14 @@ if __name__ == '__main__':
         print("Page loaded successfully!")
         sleep(1) # just in case
         flight_cards = get_flight_cards()
-        flight_cards_flex = get_flex_table()
+        flight_price_cards_flex = get_flex_table()
+        flight_date_cards_flex = scrape_flex_table_dates()
 
         flight_prices = scrape_prices(flight_cards)
         schedule_a, schedule_b = scrape_flight_schedule(flight_cards)
         company_a, company_b = scrape_flight_companies(flight_cards)
         connections_a, connections_b = scrape_connections(flight_cards)
         time_a, time_b = scrape_estimated_time(flight_cards)
-
-        flex_prices_3 = scrape_flex_table(flight_cards_flex)
-        print(flex_prices_3)
 
         flights_df = pd.DataFrame({'Prices': flight_prices,
                                    'Outbound Schedule': schedule_a,
@@ -245,17 +303,23 @@ if __name__ == '__main__':
                                    'Inbound Company': company_b,
                                    'Inbound Connections': connections_b
                                    })
-        print(flights_df)
+        # print(flights_df)
 
+        flex_prices_3 = scrape_flex_table_prices_3(flight_price_cards_flex)
+        flex_dates_3 = scrape_flex_table_dates_3(flight_date_cards_flex)
+        flex_json = create_flight_data_json(flex_dates_3,flex_prices_3)
+        # print(flex_prices_3)
+        # print(flex_dates_3)
+        # print(flex_json)
+        create_graph(flex_json)
     except TimeoutException:
-        print("Timed out waiting for the desired text to appear.")
+        print("Timed out... Page failed to load properly  ")
     
- 
     driver.quit()
 
-
 # NOTE:  Test -  driver.save_screenshot('./screenshots/pythonscraping.png')
-
-# TODO: Take care of edge cases in scrape_flex_table(cards) - ex: if price before given date is blank
-
 # NOTE: Implicit, Explicit Fluent wait ---> LEARN
+# NOTE: VuLg
+# TODO: Take care of edge cases in scrape_flex_table(cards) - ex: if price before given date is blank ----> I THINK I FIXED IT
+
+
