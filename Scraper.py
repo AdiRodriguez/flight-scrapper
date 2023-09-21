@@ -16,12 +16,12 @@ from selenium.common.exceptions import TimeoutException
 
 from datetime import datetime
 
-
 import matplotlib.pyplot as plt
 
-
+# --------------------------------------------------------
 # Web Navigation Functions
 # --------------------------------------------------------
+# NOTE: Web Navigation NEED to be in a "Try and Except" block to avoid runtime ERROR
 def close_popup_window():
     popup_window = "RxNS-button-content"
     try:
@@ -29,9 +29,7 @@ def close_popup_window():
         print("Clicked cookies pop-up. Sleeping... (2 seconds)")
         sleep(2)
     except:
-        print("Reached the except in CLOSE_POPUP_WINDOW function...")
-        print("Skipping...")
-        pass
+        ERROR("close_popup_window",popup_window,"pass")
 
 
 def load_more():
@@ -42,18 +40,16 @@ def load_more():
         print('Sleeping..... (3 seconds)')
         sleep(3)
     except:
-        print("Reached the except in LOAD_MORE function...")
-        pass
+        ERROR("load_more",more_results,"pass")
 
 # --------------------------------------------------------
 # Data Scraping Functions
 # --------------------------------------------------------
-
-
 def get_flight_cards():
     HTML_flight_cards = []
+    flight_cards_class = "nrc6-inner"
     try:
-        flight_rows = driver.find_elements(By.CLASS_NAME, 'nrc6-inner')
+        flight_rows = driver.find_elements(By.CLASS_NAME, flight_cards_class)
         for WebElement in flight_rows:
             elementHTML = WebElement.get_attribute('outerHTML')
             elementSoup = BeautifulSoup(elementHTML, 'html.parser')
@@ -64,13 +60,13 @@ def get_flight_cards():
         else:
             return HTML_flight_cards
     except:
-        print("Couldn't find flight cards to scrape by given class name (check class name again)")
-        raise SystemExit
+        ERROR("get_flight_cards",flight_cards_class,"exit")
 
 def get_flex_table():
     HTML_flex_table = []
+    flex_table_class = "jPY1"
     try:
-        WebElements = driver.find_elements(By.CLASS_NAME, 'jPY1')
+        WebElements = driver.find_elements(By.CLASS_NAME, flex_table_class)
         for WebElement in WebElements:
             elementHTML = WebElement.get_attribute('outerHTML')
             elementSoup = BeautifulSoup(elementHTML, 'html.parser')
@@ -81,26 +77,41 @@ def get_flex_table():
         else:
             return HTML_flex_table
     except:
-        print("Couldn't find flight cards to scrape by given class name (check class name again)")
-        raise SystemExit
-    
+        ERROR("get_flex_table", flex_table_class,"exit")
+  
 #NOTE: FIX!! 
-def scrape_flex_table_dates():
+def get_flex_table_dates():
     HTML_flex_table = []
+    flex_table_class = "VuLg"
     try:
-        WebElements = driver.find_elements(By.CLASS_NAME, 'VuLg')
+        WebElements = driver.find_elements(By.CLASS_NAME, flex_table_class)
         for WebElement in WebElements:
             elementHTML = WebElement.get_attribute('outerHTML')
             elementSoup = BeautifulSoup(elementHTML, 'html.parser')
-            HTML_flex_table.append(elementSoup.text)
+            HTML_flex_table.append(elementSoup.text) # NOTE: Didn't know i can convert is instantly with .text --> should do the same in get_flex_table
         if HTML_flex_table == []:
             print("Couldn't find any flights(Array is empty)")
             raise SystemExit
         else:
             return HTML_flex_table
     except:
-        print("Couldn't find flight cards to scrape by given class name (check class name again)")
-        raise SystemExit
+        ERROR("scrape_flex_table_dates",flex_table_class,"exit")
+
+def find_best_card(cards):
+    html_class = "btf6-badge-wrap"
+    best_card = []
+
+    for card in cards:
+        try:
+            best = card.find(class_= html_class)
+            print(best.text)
+            best_card.append(card)
+        except:
+            pass
+    return best_card
+
+
+
 
 def scrape_prices(cards):
     prices = []
@@ -207,24 +218,16 @@ def scrape_flex_table_dates_3(list):
     new_list = list[:7]
     return new_list
 
-# NOTE: Do the rest of the "get" functions (If needed)
-
-def change_date_format(date):
-    date_object = datetime.strptime(date, "%Y-%m-%d")
-    formatted_date = date_object.strftime("%a, %d %b")
-    return (formatted_date)
-
-
-
 def create_flight_data_json(dates, prices):
+    flight_data_json = []
+    
     if len(dates) != len(prices):
         raise ValueError("Dates and prices lists must have the same length")
 
-    flight_data = []
-
     for date, price in zip(dates, prices):
-        flight_data.append({"date": date, "price": price})
-    return flight_data
+        flight_data_json.append({"date": date, "price": price})
+
+    return flight_data_json
 
 def create_graph(json):
     dates = []
@@ -250,6 +253,23 @@ def create_graph(json):
     # Show the graph
     plt.tight_layout()
     plt.show()
+# --------------------------------------------------------
+# Miscellaneous Functions
+# --------------------------------------------------------
+def ERROR(function_name, class_name, exit_or_pass):
+    print(f"Reached the except in !!!!{function_name}!!! function...")
+    print(f"No Element by the class name: {class_name}")
+    if exit_or_pass == "pass":
+        print("Skipping...")
+    elif exit_or_pass == "exit":
+        print("Shuting down...")
+        raise SystemExit
+    
+def change_date_format(date):
+    date_object = datetime.strptime(date, "%Y-%m-%d")
+    formatted_date = date_object.strftime("%a, %d %b")
+    return (formatted_date)
+
 
 # --------------------------------------------------------
 # Dummy Data
@@ -260,39 +280,41 @@ date_start = "2023-10-28"
 date_end = "2023-11-25"
 
 
-URL = 'https://www.kayak.co.uk/flights/{from_location}-{to_location}/{date_start}-flexible/{date_end}-flexible?sort=bestflight_a'.format(
+URL = 'https://www.kayak.co.uk/flights/TYO-LON/2023-10-28-flexible/2023-11-25-flexible?sort=bestflight_a'.format(
     to_location=to_location, from_location=from_location, date_start=date_start, date_end=date_end)
-timeout = 40
+timeout = 70
+print(URL)
 
 # --------------------------------------------------------
 # Main Code
 # --------------------------------------------------------
 if __name__ == '__main__':
-    options = Options()
-    options.page_load_strategy = 'eager'
-    driver = webdriver.Chrome(options=options)
+    chrome_options = webdriver.ChromeOptions()
+    chrome_options.page_load_strategy = 'eager'
+    # chrome_options.add_argument("--no-sandbox")
+    # chrome_options.add_argument("--headless")
+    # chrome_options.add_argument("--disable-gpu")
+    driver = webdriver.Chrome(options=chrome_options)
     driver.get(URL)
-    sleep(3)
+    sleep(10)
     close_popup_window()
     # load_more()
     # load_more()
     try:
         WebDriverWait(driver, timeout).until_not(
             EC.text_to_be_present_in_element(
-                (By.CLASS_NAME, "col-advice"), "Loading...")
+                (By.CLASS_NAME, "biRz-loading"), "Loading...")
         )
         print("Page loaded successfully!")
         sleep(1) # just in case
+
         flight_cards = get_flight_cards()
-        flight_price_cards_flex = get_flex_table()
-        flight_date_cards_flex = scrape_flex_table_dates()
 
         flight_prices = scrape_prices(flight_cards)
         schedule_a, schedule_b = scrape_flight_schedule(flight_cards)
         company_a, company_b = scrape_flight_companies(flight_cards)
         connections_a, connections_b = scrape_connections(flight_cards)
         time_a, time_b = scrape_estimated_time(flight_cards)
-
         flights_df = pd.DataFrame({'Prices': flight_prices,
                                    'Outbound Schedule': schedule_a,
                                    'Outbound Estimated Time': time_a,
@@ -303,18 +325,23 @@ if __name__ == '__main__':
                                    'Inbound Company': company_b,
                                    'Inbound Connections': connections_b
                                    })
-        # print(flights_df)
+        print(flights_df)
+
+        flight_price_cards_flex = get_flex_table()
+        flight_date_cards_flex = get_flex_table_dates()
 
         flex_prices_3 = scrape_flex_table_prices_3(flight_price_cards_flex)
         flex_dates_3 = scrape_flex_table_dates_3(flight_date_cards_flex)
         flex_json = create_flight_data_json(flex_dates_3,flex_prices_3)
-        # print(flex_prices_3)
-        # print(flex_dates_3)
-        # print(flex_json)
+        print(flex_prices_3)
+        print(flex_dates_3)
+        print(flex_json)
         create_graph(flex_json)
+
+        best_card = find_best_card(flight_cards)
     except TimeoutException:
         print("Timed out... Page failed to load properly  ")
-    
+    sleep(2000)
     driver.quit()
 
 # NOTE:  Test -  driver.save_screenshot('./screenshots/pythonscraping.png')
@@ -323,3 +350,4 @@ if __name__ == '__main__':
 # TODO: Take care of edge cases in scrape_flex_table(cards) - ex: if price before given date is blank ----> I THINK I FIXED IT
 
 
+# NOTE: BEST and CHEAPEST are saved in calls "btf6-badge-wrap"
