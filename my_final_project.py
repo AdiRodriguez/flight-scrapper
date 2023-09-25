@@ -191,61 +191,58 @@ def send_email(price, target_price):
 
 
 if __name__ == '__main__':
+    while True:
 
-    URL = "https://www.kayak.co.uk/flights/TYO-LON/2023-10-28-flexible/2023-11-25-flexible?sort=bestflight_a"
+        URL = "https://www.kayak.co.uk/flights/TYO-LON/2023-10-28-flexible/2023-11-25-flexible?sort=bestflight_a"
 
-    timeout = 100
+        timeout = 100
 
-    browser_driver = Service('/usr/lib/chromium-browser/chromedriver')
-    chrome_options = webdriver.ChromeOptions()
-    chrome_options.page_load_strategy = 'eager'
-    # chrome_options.add_argument("--no-sandbox")
-    # chrome_options.add_argument("--headless")
-    # chrome_options.add_argument("--disable-gpu")
-    driver = webdriver.Chrome(service=browser_driver,options=chrome_options)
-    driver.get(URL)
-    sleep(20)
-    close_popup_window()
-    load_more()
-    load_more()
-    try:
-        WebDriverWait(driver, timeout).until_not(
-            EC.text_to_be_present_in_element(
-                (By.CLASS_NAME, "biRz-loading"), "Loading...")
-        )
-        print("Page loaded successfully!")
-        sleep(1) # just in case
-        flight_cards = get_flight_cards()
+        browser_driver = Service('/usr/lib/chromium-browser/chromedriver')
+        chrome_options = webdriver.ChromeOptions()
+        chrome_options.page_load_strategy = 'eager'
+        # chrome_options.add_argument("--no-sandbox")
+        # chrome_options.add_argument("--headless")
+        # chrome_options.add_argument("--disable-gpu")
+        driver = webdriver.Chrome(service=browser_driver,options=chrome_options)
+        driver.get(URL)
+        sleep(20)
+        close_popup_window()
+        load_more()
+        load_more()
+        try:
+            WebDriverWait(driver, timeout).until_not(
+                EC.text_to_be_present_in_element(
+                    (By.CLASS_NAME, "biRz-loading"), "Loading...")
+            )
+            print("Page loaded successfully!")
+            sleep(1) # just in case
+            flight_cards = get_flight_cards()
 
-        flight_prices = scrape_prices(flight_cards)
-        schedule_a, schedule_b = scrape_flight_schedule(flight_cards)
-        company_a, company_b = scrape_flight_companies(flight_cards)
-        connections_a, connections_b = scrape_connections(flight_cards)
-        time_a, time_b = scrape_estimated_time(flight_cards)
+            flight_prices = scrape_prices(flight_cards)
+            schedule_a, schedule_b = scrape_flight_schedule(flight_cards)
+            company_a, company_b = scrape_flight_companies(flight_cards)
+            connections_a, connections_b = scrape_connections(flight_cards)
+            time_a, time_b = scrape_estimated_time(flight_cards)
 
-        flights_df = pd.DataFrame({'Prices': flight_prices,
-                                   'Outbound Schedule': schedule_a,
-                                   'Outbound Estimated Time': time_a,
-                                   'Outbound Company': company_a,
-                                   'Outbound Connections': connections_a,
-                                   'Inbound Schedule': schedule_b,
-                                   'Inbound Estimated Time': time_b,
-                                   'Inbound Company': company_b,
-                                   'Inbound Connections': connections_b
-                                   })
-        # print(flights_df)
+            flights_df = pd.DataFrame({'Prices': flight_prices,
+                                    'Outbound Schedule': schedule_a,
+                                    'Outbound Estimated Time': time_a,
+                                    'Outbound Company': company_a,
+                                    'Outbound Connections': connections_a,
+                                    'Inbound Schedule': schedule_b,
+                                    'Inbound Estimated Time': time_b,
+                                    'Inbound Company': company_b,
+                                    'Inbound Connections': connections_b
+                                    })
+            # print(flights_df)
 
-        prices = flights_df['Prices']
+            prices = flights_df['Prices']
+            loswest_price = min(prices)
+            if loswest_price < 500:
+                send_email(loswest_price, "500")
+                    
+        except TimeoutException:
+            print("Timed out... Page failed to load properly  ")
+        driver.quit()
 
-        for price in prices:
-            if price < 1000:
-                send_email(price, "1000")
-                break
-        
-
-
-
-    except TimeoutException:
-        print("Timed out... Page failed to load properly  ")
-    sleep(20)
-    driver.quit()
+        sleep((5 * 60 * 60))
