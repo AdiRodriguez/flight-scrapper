@@ -192,7 +192,7 @@ def send_email(price, target_price):
 
 if __name__ == '__main__':
     while True:
-        # Here we change according to our liking
+        # Here we change according to our liking. the program will shutdown if not entered correctly 
         # NOTE: airports format: XYZ
         # NOTE: date format: YYYY-MM-DD
         # NOTE: date_start <= date_end
