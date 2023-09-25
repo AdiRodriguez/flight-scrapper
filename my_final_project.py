@@ -192,12 +192,16 @@ def send_email(price, target_price):
 
 if __name__ == '__main__':
     while True:
+        # Here we change according to our liking
+        # NOTE: airports format: XYZ
+        # NOTE: date format: YYYY-MM-DD
+        # NOTE: date_start <= date_end
         to_location="TYO"
         from_location="LON"
         date_start="2023-10-28"
         date_end="2023-11-25"
         target_price = 500
-        
+
         URL = f"https://www.kayak.co.uk/flights/{to_location}-{from_location}/{date_start}flexible/{date_end}flexible?sort=bestflight_a".format(to_location=to_location, from_location=from_location, date_start=date_start, date_end=date_end)
 
         timeout = 100
@@ -244,7 +248,11 @@ if __name__ == '__main__':
             prices = flights_df['Prices']
             loswest_price = min(prices)
             if loswest_price < target_price: 
+                print(f"Found price below {target_price}!")
+                print(f"Lowest is: {loswest_price}")
+                print("Sending email with URL...")
                 send_email(loswest_price, f"{target_price}")
+                print("Sent!")
                     
         except TimeoutException:
             print("Timed out... Page failed to load properly  ")
