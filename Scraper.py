@@ -79,7 +79,7 @@ def get_flex_table():
     except:
         ERROR("get_flex_table", flex_table_class,"exit")
   
-#NOTE: FIX!! 
+
 def get_flex_table_dates():
     HTML_flex_table = []
     flex_table_class = "VuLg"
@@ -213,7 +213,7 @@ def scrape_flex_table_prices_3(cards):
             prices.append("Not Available ")
     return prices
 
-#NOTE: FIX!!
+
 def scrape_flex_table_dates_3(list):
     new_list = list[:7]
     return new_list
@@ -272,7 +272,7 @@ def change_date_format(date):
 
 
 # --------------------------------------------------------
-# Dummy Data
+# Entries
 # --------------------------------------------------------
 from_location = 'TYO'
 to_location = 'LON'
@@ -280,7 +280,7 @@ date_start = "2023-10-28"
 date_end = "2023-11-25"
 
 
-URL = 'https://www.kayak.co.uk/flights/TYO-LON/2023-10-28-flexible/2023-11-25-flexible?sort=bestflight_a'.format(
+URL = f'https://www.kayak.co.uk/flights/{from_location}-{to_location}/{date_start}-flexible/{date_end}-flexible?sort=bestflight_a'.format(
     to_location=to_location, from_location=from_location, date_start=date_start, date_end=date_end)
 timeout = 70
 print(URL)
@@ -306,7 +306,7 @@ if __name__ == '__main__':
                 (By.CLASS_NAME, "biRz-loading"), "Loading...")
         )
         print("Page loaded successfully!")
-        sleep(1) # just in case
+        sleep(1) 
 
         flight_cards = get_flight_cards()
 
@@ -341,13 +341,8 @@ if __name__ == '__main__':
         best_card = find_best_card(flight_cards)
     except TimeoutException:
         print("Timed out... Page failed to load properly  ")
-    sleep(2000)
+    sleep(20)
     driver.quit()
 
 # NOTE:  Test -  driver.save_screenshot('./screenshots/pythonscraping.png')
 # NOTE: Implicit, Explicit Fluent wait ---> LEARN
-# NOTE: VuLg
-# TODO: Take care of edge cases in scrape_flex_table(cards) - ex: if price before given date is blank ----> I THINK I FIXED IT
-
-
-# NOTE: BEST and CHEAPEST are saved in calls "btf6-badge-wrap"
